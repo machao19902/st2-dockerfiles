@@ -1,0 +1,55 @@
+FROM arm64v8/ubuntu:14.04.5
+MAINTAINER QingYuan <qingyuanluofeng@163.com>
+
+ENV DEBIAN_FRONTEND noninteractive
+
+# Install build dependencies. Note that python is required to build Node.
+RUN apt-get update && \
+    apt-get upgrade -y && \
+    apt-get install -y --no-install-recommends \
+    autoconf \
+    bison \
+    build-essential \
+    ca-certificates \
+    curl \
+    git-core \
+    libcurl4-openssl-dev \
+    libffi-dev \
+    libgdbm3 \
+    libgdbm-dev \
+    libreadline-dev \
+    libncurses5-dev \
+    libsqlite3-dev \
+    libssl-dev \
+    libxml2-dev \
+    libxslt1-dev \
+    libyaml-dev \
+    python2.7 \
+    sqlite3 \
+    zlib1g-dev \
+    openssh-server
+
+# Clone everything, and setup the path.
+RUN git clone https://github.com/rbenv/rbenv.git /root/.rbenv && \
+    git clone https://github.com/rbenv/ruby-build.git /root/.rbenv/plugins/ruby-build && \
+    git clone https://github.com/nodenv/nodenv.git /root/.nodenv && \
+    git clone https://github.com/nodenv/node-build.git /root/.nodenv/plugins/node-build && \
+    git clone https://github.com/nodenv/nodenv-package-rehash.git /root/.nodenv/plugins/nodenv-package-rehash && \
+    git clone https://github.com/nodenv/nodenv-update.git /root/.nodenv/plugins/nodenv-update
+ENV PATH /root/.rbenv/shims:/root/.rbenv/bin:/root/.nodenv/shims:/root/.nodenv/bin:$PATH
+
+RUN rbenv install -v 2.2.3 && \
+    rbenv global 2.2.3 && \
+    gem install bundler -v 1.10.6
+
+# configure ssh
+# Enable remote pubkey access
+RUN mkdir /root/.ssh && chmod 700 /root/.ssh && \
+    echo "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCdCmmPjsOBWRXc+PKdgDRrsciNjp25zTacyz8Gdkln2ma046brOYXAphhp/85DKgHtANBBt3cl4+HnpDbmAfyq2qZT7hWzAbMxtq0Sj+yyFyUdreXoe4gEKyxpV6o8p/R/XzEcawvqX/vFc5EIFmvTdamxZs9DQmOE5AZMzUB18Kerkrb0/arUcZ8iMi9Ng9a18avow+7oUFZ6Oub7ISz/dkIRojaKO/2paJZ4p+v7ZLn7Hq8TUeBkgAlx872oh8J8linhIq17zK6x4MGL8qiurp2hnfe0cuCxwcsYGy+4DfK51+E2vks6FprCIfF5hIdz26euPn67/YpM0F0b5nXF busybee@drone" >> /root/.ssh/authorized_keys
+
+# Create busybee credentials and make busybee pkey available for root
+COPY busybee*  /root/.ssh/
+RUN chmod 600 /root/.ssh/busybee
+RUN ssh-keygen -t rsa -N '' -f /etc/ssh/ssh_host_rsa_key
+
+CMD ["/bin/bash"]
